@@ -403,9 +403,9 @@ def _prepare_request(
     url: str,
     *,
     enc_params="",
-    timeout=DEFAULT_TIMEOUT,
-    source_address=None,
-    unix_socket=None,
+    timeout: float = DEFAULT_TIMEOUT,
+    source_address: str | tuple[str, int] | None = None,
+    unix_socket: str | None = None,
     verify: bool = True,
     ssl_context: ssl.SSLContext | None = None,
 ) -> tuple[str, HTTPConnection | UnixHTTPConnection | HTTPSConnection, str]:
@@ -469,7 +469,7 @@ def _prepare_request(
             host, port, source_address=source_address, timeout=timeout,
         )
 
-    munged_url = urllib.parse.urlunparse(
+    munged_url: str = urllib.parse.urlunparse(
         (
             parsed_url.scheme,
             parsed_url.netloc,
