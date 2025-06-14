@@ -95,8 +95,8 @@ def delete(url, **kwargs):
 
 @contextlib.contextmanager
 def yield_response(
-    method,
-    url,
+    method: str,
+    url: str,
     *,
     unix_socket=None,
     timeout=DEFAULT_TIMEOUT,
@@ -108,7 +108,7 @@ def yield_response(
     verify=True,
     source_address=None,
     max_redirects=None,
-    ssl_context=None,
+    ssl_context: ssl.SSLContext | None = None,
 ):
     """yield_response is a low-level API that exposes the actual
     http.client.HTTPResponse via a contextmanager.
@@ -406,9 +406,9 @@ def _prepare_request(
     timeout=DEFAULT_TIMEOUT,
     source_address=None,
     unix_socket=None,
-    verify=True,
-    ssl_context=None,
-):
+    verify: bool = True,
+    ssl_context: ssl.SSLContext | None = None,
+) -> tuple[str, HTTPConnection | UnixHTTPConnection | HTTPSConnection, str]:
     """Parses the URL, returns the path and the right HTTPConnection subclass."""
     parsed_url = urllib.parse.urlparse(url)
 
