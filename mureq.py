@@ -147,7 +147,7 @@ def yield_response(
     enc_params = _prepare_params(params)
     body = _prepare_body(body, form, json, headers)
 
-    visited_urls = []
+    visited_urls: list[str] = []
 
     while max_redirects is None or len(visited_urls) <= max_redirects:
         url, conn, path = _prepare_request(
@@ -448,6 +448,7 @@ def _prepare_request(
     if isinstance(source_address, str):
         source_address = (source_address, 0)
 
+    conn: HTTPConnection | UnixHTTPConnection | HTTPSConnection
     if is_unix:
         conn = UnixHTTPConnection(unix_socket, timeout=timeout)
     elif is_https:
