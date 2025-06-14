@@ -256,7 +256,6 @@ class TooManyRedirects(HTTPException):
     """
 
 
-
 class HTTPErrorStatus(HTTPException):
     """HTTPErrorStatus is raised by Response.raise_for_status() to indicate an
     HTTP error code (a 40x or a 50x). Note that a well-formed response with an
@@ -392,7 +391,7 @@ def _prepare_body(body, form, json, headers):
     return None
 
 
-def _prepare_params(params):
+def _prepare_params(params) -> str:
     if params is None:
         return ""
     return urllib.parse.urlencode(params, doseq=True)
@@ -402,7 +401,7 @@ def _prepare_request(
     method: str,
     url: str,
     *,
-    enc_params="",
+    enc_params: str = "",
     timeout: float = DEFAULT_TIMEOUT,
     source_address: str | tuple[str, int] | None = None,
     unix_socket: str | None = None,
@@ -466,17 +465,22 @@ def _prepare_request(
         )
     else:
         conn = HTTPConnection(
-            host, port, source_address=source_address, timeout=timeout,
+            host,
+            port,
+            source_address=source_address,
+            timeout=timeout,
         )
 
-    munged_url: str = urllib.parse.urlunparse(
-        (
-            parsed_url.scheme,
-            parsed_url.netloc,
-            path,
-            parsed_url.params,
-            "",
-            parsed_url.fragment,
-        ),
+    munged_url = str(
+        urllib.parse.urlunparse(
+            (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                path,
+                parsed_url.params,
+                "",
+                parsed_url.fragment,
+            ),
+        )
     )
     return munged_url, conn, path
