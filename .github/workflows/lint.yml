@@ -17,12 +17,10 @@ jobs:
         cache-dependency-path: requirements-dev.txt
         allow-prereleases: true
     - run: pip install -r requirements-dev.txt
+    - run: mypy mureq.py
+    - run: ty check mureq.py
+    - run: pyrefly check mureq.py
     - run: ruff check mureq.py
-    - name: Run type checks
-      run: |
-        mypy mureq.py
-        ty check mureq.py
-        pyrefly check mureq.py
     - uses: psf/black@stable
       with:
         options: "--check --verbose"

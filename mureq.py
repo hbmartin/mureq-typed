@@ -1,5 +1,4 @@
-"""
-mureq is a replacement for python-requests, intended to be vendored
+"""mureq is a replacement for python-requests, intended to be vendored
 in-tree by Linux systems software and other lightweight applications.
 
 mureq is copyright 2021 by its contributors and is released under the
@@ -13,22 +12,22 @@ import socket
 import ssl
 import sys
 import urllib.parse
-from http.client import HTTPConnection, HTTPSConnection, HTTPMessage, HTTPException
+from http.client import HTTPConnection, HTTPException, HTTPMessage, HTTPSConnection
 
 __version__ = "0.2.0"
 
 __all__ = [
     "HTTPException",
-    "TooManyRedirects",
     "Response",
-    "yield_response",
-    "request",
-    "get",
-    "post",
-    "head",
-    "put",
-    "patch",
+    "TooManyRedirects",
     "delete",
+    "get",
+    "head",
+    "patch",
+    "post",
+    "put",
+    "request",
+    "yield_response",
 ]
 
 DEFAULT_TIMEOUT = 15.0
@@ -38,7 +37,7 @@ DEFAULT_UA = "Python " + sys.version.split()[0]
 
 
 def request(method, url, *, read_limit=None, **kwargs):
-    """request performs an HTTP request and reads the entire response body.
+    """Request performs an HTTP request and reads the entire response body.
 
     :param str method: HTTP method to request (e.g. 'GET', 'POST')
     :param str url: URL to request
@@ -54,7 +53,7 @@ def request(method, url, *, read_limit=None, **kwargs):
             body = response.read(read_limit)
         except HTTPException:
             raise
-        except IOError as e:
+        except OSError as e:
             raise HTTPException(str(e)) from e
         return Response(
             response.url,
@@ -65,32 +64,32 @@ def request(method, url, *, read_limit=None, **kwargs):
 
 
 def get(url, **kwargs):
-    """get performs an HTTP GET request."""
+    """Get performs an HTTP GET request."""
     return request("GET", url=url, **kwargs)
 
 
 def post(url, body=None, **kwargs):
-    """post performs an HTTP POST request."""
+    """Post performs an HTTP POST request."""
     return request("POST", url=url, body=body, **kwargs)
 
 
 def head(url, **kwargs):
-    """head performs an HTTP HEAD request."""
+    """Head performs an HTTP HEAD request."""
     return request("HEAD", url=url, **kwargs)
 
 
 def put(url, body=None, **kwargs):
-    """put performs an HTTP PUT request."""
+    """Put performs an HTTP PUT request."""
     return request("PUT", url=url, body=body, **kwargs)
 
 
 def patch(url, body=None, **kwargs):
-    """patch performs an HTTP PATCH request."""
+    """Patch performs an HTTP PATCH request."""
     return request("PATCH", url=url, body=body, **kwargs)
 
 
 def delete(url, **kwargs):
-    """delete performs an HTTP DELETE request."""
+    """Delete performs an HTTP DELETE request."""
     return request("DELETE", url=url, **kwargs)
 
 
@@ -169,7 +168,7 @@ def yield_response(
                 response = conn.getresponse()
             except HTTPException:
                 raise
-            except IOError as e:
+            except OSError as e:
                 # wrap any IOError that is not already an HTTPException
                 # in HTTPException, exposing a uniform API for remote errors
                 raise HTTPException(str(e)) from e
@@ -198,7 +197,7 @@ class Response:
     :ivar bytes body: the payload body of the response
     """
 
-    __slots__ = ("url", "status_code", "headers", "body")
+    __slots__ = ("body", "headers", "status_code", "url")
 
     def __init__(self, url, status_code, headers, body):
         self.url, self.status_code, self.headers, self.body = (
@@ -213,19 +212,22 @@ class Response:
 
     @property
     def ok(self):
-        """ok returns whether the response had a successful status code
-        (anything other than a 40x or 50x)."""
+        """Ok returns whether the response had a successful status code
+        (anything other than a 40x or 50x).
+        """
         return not (400 <= self.status_code < 600)
 
     @property
     def content(self):
-        """content returns the response body (the `body` member). This is an
-        alias for compatibility with requests.Response."""
+        """Content returns the response body (the `body` member). This is an
+        alias for compatibility with requests.Response.
+        """
         return self.body
 
     def raise_for_status(self):
         """raise_for_status checks the response's success code, raising an
-        exception for error codes."""
+        exception for error codes.
+        """
         if not self.ok:
             raise HTTPErrorStatus(self.status_code)
 
@@ -250,9 +252,9 @@ class Response:
 
 class TooManyRedirects(HTTPException):
     """TooManyRedirects is raised when automatic following of redirects was
-    enabled, but the server redirected too many times without completing."""
+    enabled, but the server redirected too many times without completing.
+    """
 
-    pass
 
 
 class HTTPErrorStatus(HTTPException):
@@ -318,7 +320,7 @@ def _check_redirect(url, status, response_headers):
                 parsed_location.params,
                 parsed_location.query,
                 parsed_location.fragment,
-            )
+            ),
         )
 
     # relative path on old hostname
@@ -332,7 +334,7 @@ def _check_redirect(url, status, response_headers):
             parsed_location.params,
             parsed_location.query,
             parsed_location.fragment,
-        )
+        ),
     )
 
 
@@ -436,11 +438,10 @@ def _prepare_request(
             path = f"{path}?{parsed_url.query}&{enc_params}"
         else:
             path = f"{path}?{parsed_url.query}"
+    elif enc_params:
+        path = f"{path}?{enc_params}"
     else:
-        if enc_params:
-            path = f"{path}?{enc_params}"
-        else:
-            pass  # just parsed_url.path in this case
+        pass  # just parsed_url.path in this case
 
     if isinstance(source_address, str):
         source_address = (source_address, 0)
@@ -462,7 +463,7 @@ def _prepare_request(
         )
     else:
         conn = HTTPConnection(
-            host, port, source_address=source_address, timeout=timeout
+            host, port, source_address=source_address, timeout=timeout,
         )
 
     munged_url = urllib.parse.urlunparse(
@@ -473,6 +474,6 @@ def _prepare_request(
             parsed_url.params,
             "",
             parsed_url.fragment,
-        )
+        ),
     )
     return munged_url, conn, path
