@@ -12,9 +12,15 @@ import socket
 import ssl
 import sys
 import urllib.parse
-from collections.abc import MutableMapping
-from http.client import HTTPConnection, HTTPException, HTTPMessage, HTTPSConnection
-from typing import Any, cast
+from collections.abc import Generator, MutableMapping
+from http.client import (
+    HTTPConnection,
+    HTTPException,
+    HTTPMessage,
+    HTTPResponse,
+    HTTPSConnection,
+)
+from typing import cast
 
 __version__ = "0.2.0"
 
@@ -32,7 +38,7 @@ __all__ = [
     "yield_response",
 ]
 
-DEFAULT_TIMEOUT = 15.0
+DEFAULT_TIMEOUT: int = 15
 
 # e.g. "Python 3.8.10"
 DEFAULT_UA = "Python " + sys.version.split()[0]
@@ -41,7 +47,9 @@ Headers = MutableMapping[str, str] | HTTPMessage
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
-def request(method: str, url: str, *, read_limit: int | None = None, **kwargs) -> "Response":
+def request(
+    method: str, url: str, *, read_limit: int | None = None, **kwargs,
+) -> "Response":
     """Request performs an HTTP request and reads the entire response body.
 
     :param str method: HTTP method to request (e.g. 'GET', 'POST')
@@ -68,27 +76,27 @@ def request(method: str, url: str, *, read_limit: int | None = None, **kwargs) -
         )
 
 
-def get(url, **kwargs):
+def get(url: str, **kwargs) -> "Response":
     """Get performs an HTTP GET request."""
     return request("GET", url=url, **kwargs)
 
 
-def post(url, body=None, **kwargs):
+def post(url: str, body: bytes | None = None, **kwargs) -> "Response":
     """Post performs an HTTP POST request."""
     return request("POST", url=url, body=body, **kwargs)
 
 
-def head(url, **kwargs):
+def head(url: str, **kwargs) -> "Response":
     """Head performs an HTTP HEAD request."""
     return request("HEAD", url=url, **kwargs)
 
 
-def put(url, body=None, **kwargs):
+def put(url: str, body: bytes | None = None, **kwargs) -> "Response":
     """Put performs an HTTP PUT request."""
     return request("PUT", url=url, body=body, **kwargs)
 
 
-def patch(url, body=None, **kwargs):
+def patch(url: str, body: bytes | None = None, **kwargs) -> "Response":
     """Patch performs an HTTP PATCH request."""
     return request("PATCH", url=url, body=body, **kwargs)
 
@@ -103,18 +111,18 @@ def yield_response(
     method: str,
     url: str,
     *,
-    unix_socket=None,
-    timeout=DEFAULT_TIMEOUT,
-    headers=None,
-    params=None,
-    body=None,
-    form=None,
-    json=None,
-    verify=True,
-    source_address=None,
-    max_redirects=None,
+    unix_socket: str | None = None,
+    timeout: float | None = DEFAULT_TIMEOUT,
+    headers: Headers | list[tuple[str, str]] | None = None,
+    params: dict[str, str | bytes] | list[tuple[str, str | bytes]] | None = None,
+    body: bytes | None = None,
+    form: dict[str, str | bytes] | list[tuple[str, str | bytes]] | None = None,
+    json: JsonValue | None = None,
+    verify: bool = True,
+    source_address: str | tuple[str, int] | None = None,
+    max_redirects: int | None = None,
     ssl_context: ssl.SSLContext | None = None,
-):
+) -> Generator[HTTPResponse, None, None]:
     """yield_response is a low-level API that exposes the actual
     http.client.HTTPResponse via a contextmanager.
 
@@ -129,7 +137,7 @@ def yield_response(
     :param unix_socket: path to Unix domain socket to query, or None for a normal TCP request
     :type unix_socket: str or None
     :param timeout: timeout in seconds, or None for no timeout (default: 15 seconds)
-    :type timeout: float or None
+    :type timeout: int or None
     :param headers: HTTP headers as a mapping or list of key-value pairs
     :param params: parameters to be URL-encoded and added to the query string, as a mapping or list of key-value pairs
     :param body: payload body of the request
@@ -150,7 +158,7 @@ def yield_response(
     method = method.upper()
     headers = cast("MutableMapping[str, str]", _prepare_outgoing_headers(headers))
     enc_params = _prepare_params(params)
-    body = _prepare_body(body, form, json, headers)
+    prepared_body: bytes | str | None = _prepare_body(body, form, json, headers)
 
     visited_urls: list[str] = []
 
@@ -169,7 +177,7 @@ def yield_response(
         visited_urls.append(url)
         try:
             try:
-                conn.request(method, path, headers=headers, body=body)
+                conn.request(method, path, headers=headers, body=prepared_body)
                 response = conn.getresponse()
             except HTTPException:
                 raise
@@ -292,7 +300,7 @@ class UnixHTTPConnection(HTTPConnection):
     Unix domain stream socket instead of a TCP address.
     """
 
-    def __init__(self, path: str, timeout: float = DEFAULT_TIMEOUT) -> None:
+    def __init__(self, path: str, timeout: int | None = DEFAULT_TIMEOUT) -> None:
         super().__init__("localhost", timeout=timeout)
         self._unix_path = path
 
@@ -322,39 +330,47 @@ def _check_redirect(url: str, status: int, response_headers: Headers) -> str | N
     old_url = urllib.parse.urlparse(url)
     if location.startswith("/"):
         # absolute path on old hostname
-        return urllib.parse.urlunparse(
-            (
-                old_url.scheme,
-                old_url.netloc,
-                parsed_location.path,
-                parsed_location.params,
-                parsed_location.query,
-                parsed_location.fragment,
+        return str(
+            urllib.parse.urlunparse(
+                (
+                    old_url.scheme,
+                    old_url.netloc,
+                    parsed_location.path,
+                    parsed_location.params,
+                    parsed_location.query,
+                    parsed_location.fragment,
+                ),
             ),
         )
 
     # relative path on old hostname
     old_dir, _old_file = os.path.split(old_url.path)
     new_path = os.path.join(old_dir, location)
-    return urllib.parse.urlunparse(
-        (
-            old_url.scheme,
-            old_url.netloc,
-            new_path,
-            parsed_location.params,
-            parsed_location.query,
-            parsed_location.fragment,
+    return str(
+        urllib.parse.urlunparse(
+            (
+                old_url.scheme,
+                old_url.netloc,
+                new_path,
+                parsed_location.params,
+                parsed_location.query,
+                parsed_location.fragment,
+            ),
         ),
     )
 
 
-def _prepare_outgoing_headers(headers: Headers | None) -> HTTPMessage:
+def _prepare_outgoing_headers(headers: Headers | list[tuple[str, str]] | None) -> HTTPMessage:
     if headers is None:
         headers = HTTPMessage()
     elif not isinstance(headers, HTTPMessage):
         new_headers = HTTPMessage()
-        for k, v in headers.items():
-            new_headers[k] = v
+        if isinstance(headers, list):
+            for k, v in headers:
+                new_headers[k] = v
+        else:
+            for k, v in headers.items():
+                new_headers[k] = v
         headers = new_headers
     _setdefault_header(headers, "User-Agent", DEFAULT_UA)
     return headers
@@ -382,7 +398,7 @@ def _setdefault_header(headers: Headers, name: str, value: str) -> None:
 def _prepare_body(
     body: bytes | None,
     form: dict[str, str | bytes] | list[tuple[str, str | bytes]] | None,
-    json: dict[str, Any] | list[Any] | None,
+    json: JsonValue | None,
     headers: Headers,
 ) -> bytes | str | None:
     if body is not None:
@@ -416,7 +432,7 @@ def _prepare_request(
     url: str,
     *,
     enc_params: str = "",
-    timeout: float = DEFAULT_TIMEOUT,
+    timeout: float | None = DEFAULT_TIMEOUT,
     source_address: str | tuple[str, int] | None = None,
     unix_socket: str | None = None,
     verify: bool = True,
@@ -457,6 +473,9 @@ def _prepare_request(
 
     if isinstance(source_address, str):
         source_address = (source_address, 0)
+
+    if timeout is not None and isinstance(timeout, float):
+        timeout = int(timeout)
 
     conn: HTTPConnection | UnixHTTPConnection | HTTPSConnection
     if unix_socket is not None:
