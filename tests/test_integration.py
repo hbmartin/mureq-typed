@@ -316,28 +316,32 @@ class UnixHTTPHandler(socketserver.BaseRequestHandler):
             "Connection: close\r\n"
             "\r\n"
         )
-        
-        self.request.sendall(response.encode('utf-8'))
+
+        self.request.sendall(response.encode("utf-8"))
+
 
 @contextlib.contextmanager
 def unix_http_server():
     """Contextmanager providing a http+unix server with its socket in a tmpdir."""
     with tempfile.TemporaryDirectory() as dirpath:
         path = os.path.join(dirpath, "sock")
-        
-        class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+
+        class ThreadedUnixServer(
+            socketserver.ThreadingMixIn, socketserver.UnixStreamServer
+        ):
             daemon_threads = True  # Ensures threads don't prevent shutdown
-        
+
         server = ThreadedUnixServer(path, UnixHTTPHandler)
         thread = threading.Thread(target=server.serve_forever)
         thread.daemon = True
         thread.start()
-        
+
         try:
             yield path
         finally:
             server.shutdown()
             server.server_close()
+
 
 class MureqIntegrationUnixSocketTestCase(unittest.TestCase):
     def test_unix_socket(self):
