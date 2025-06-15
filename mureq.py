@@ -38,6 +38,7 @@ DEFAULT_TIMEOUT = 15.0
 DEFAULT_UA = "Python " + sys.version.split()[0]
 
 Headers = MutableMapping[str, str] | HTTPMessage
+JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 def request(method, url, *, read_limit=None, **kwargs):
@@ -145,7 +146,7 @@ def yield_response(
     :return: http.client.HTTPResponse, yielded as context manager
     :rtype: http.client.HTTPResponse
     :raises: HTTPException
-    """
+    """  # noqa: E501
     method = method.upper()
     headers = cast("MutableMapping[str, str]", _prepare_outgoing_headers(headers))
     enc_params = _prepare_params(params)
@@ -203,7 +204,13 @@ class Response:
 
     __slots__ = ("body", "headers", "status_code", "url")
 
-    def __init__(self, url, status_code, headers, body):
+    def __init__(
+        self,
+        url: str,
+        status_code: int,
+        headers: Headers,
+        body: bytes,
+    ) -> None:
         self.url, self.status_code, self.headers, self.body = (
             url,
             status_code,
@@ -211,37 +218,37 @@ class Response:
             body,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Response(status_code={self.status_code:d})"
 
     @property
-    def ok(self):
+    def ok(self) -> bool:
         """Ok returns whether the response had a successful status code
         (anything other than a 40x or 50x).
         """
         return not (400 <= self.status_code < 600)
 
     @property
-    def content(self):
+    def content(self) -> bytes:
         """Content returns the response body (the `body` member). This is an
         alias for compatibility with requests.Response.
         """
         return self.body
 
-    def raise_for_status(self):
+    def raise_for_status(self) -> None:
         """raise_for_status checks the response's success code, raising an
         exception for error codes.
         """
         if not self.ok:
             raise HTTPErrorStatus(self.status_code)
 
-    def json(self):
+    def json(self) -> JsonValue:
         """Attempts to deserialize the response body as UTF-8 encoded JSON."""
         import json as jsonlib
 
         return jsonlib.loads(self.body)
 
-    def _debugstr(self):
+    def _debugstr(self) -> str:
         buf = io.StringIO()
         print("HTTP", self.status_code, file=buf)
         for k, v in self.headers.items():
@@ -267,10 +274,10 @@ class HTTPErrorStatus(HTTPException):
     called explicitly.
     """
 
-    def __init__(self, status_code):
+    def __init__(self, status_code: int) -> None:
         self.status_code = status_code
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"HTTP response returned error code {self.status_code:d}"
 
 
@@ -285,11 +292,11 @@ class UnixHTTPConnection(HTTPConnection):
     Unix domain stream socket instead of a TCP address.
     """
 
-    def __init__(self, path, timeout=DEFAULT_TIMEOUT):
-        super(UnixHTTPConnection, self).__init__("localhost", timeout=timeout)
+    def __init__(self, path: str, timeout: float = DEFAULT_TIMEOUT) -> None:
+        super().__init__("localhost", timeout=timeout)
         self._unix_path = path
 
-    def connect(self):
+    def connect(self) -> None:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock.settimeout(self.timeout)
@@ -300,7 +307,7 @@ class UnixHTTPConnection(HTTPConnection):
         self.sock = sock
 
 
-def _check_redirect(url, status, response_headers):
+def _check_redirect(url: str, status: int, response_headers: Headers) -> str | None:
     """Return the URL to redirect to, or None for no redirection."""
     if status not in (301, 302, 303, 307, 308):
         return None
