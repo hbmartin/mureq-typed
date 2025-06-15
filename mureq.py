@@ -12,7 +12,7 @@ import socket
 import ssl
 import sys
 import urllib.parse
-from collections.abc import Mapping
+from collections.abc import MutableMapping
 from http.client import HTTPConnection, HTTPException, HTTPMessage, HTTPSConnection
 from typing import Any, cast
 
@@ -37,7 +37,7 @@ DEFAULT_TIMEOUT = 15.0
 # e.g. "Python 3.8.10"
 DEFAULT_UA = "Python " + sys.version.split()[0]
 
-Headers = Mapping[str, str] | HTTPMessage
+Headers = MutableMapping[str, str] | HTTPMessage
 
 
 def request(method, url, *, read_limit=None, **kwargs):
@@ -147,7 +147,7 @@ def yield_response(
     :raises: HTTPException
     """
     method = method.upper()
-    headers = cast("Mapping[str, str]", _prepare_outgoing_headers(headers))
+    headers = cast("MutableMapping[str, str]", _prepare_outgoing_headers(headers))
     enc_params = _prepare_params(params)
     body = _prepare_body(body, form, json, headers)
 
@@ -346,11 +346,7 @@ def _prepare_outgoing_headers(headers: Headers | None) -> HTTPMessage:
         headers = HTTPMessage()
     elif not isinstance(headers, HTTPMessage):
         new_headers = HTTPMessage()
-        if hasattr(headers, "items"):
-            iterator = headers.items()
-        else:
-            iterator = iter(headers)
-        for k, v in iterator:
+        for k, v in headers.items():
             new_headers[k] = v
         headers = new_headers
     _setdefault_header(headers, "User-Agent", DEFAULT_UA)
@@ -371,7 +367,7 @@ def _prepare_incoming_headers(headers):
     return result
 
 
-def _setdefault_header(headers, name, value):
+def _setdefault_header(headers: Headers, name: str, value: str):
     if name not in headers:
         headers[name] = value
 
