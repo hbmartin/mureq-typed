@@ -2,6 +2,7 @@ mureq
 =====
 
 [![TypeChecks](https://github.com/hbmartin/mureq-typed/actions/workflows/lint.yml/badge.svg)](https://github.com/hbmartin/mureq-typed/actions/workflows/lint.yml)
+[![Test](https://github.com/hbmartin/mureq-typed/actions/workflows/test.yml/badge.svg)](https://github.com/hbmartin/mureq-typed/actions/workflows/test.yml)
 
 `mureq` is a single-file, zero-dependency alternative to [python-requests](https://github.com/psf/requests), intended to be vendored in-tree by Linux systems software and other lightweight applications. It is released under the [0BSD license](https://opensource.org/licenses/0BSD) to facilitate this (it can be freely copied without any attribution requirements).
 
