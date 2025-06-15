@@ -48,7 +48,11 @@ JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "Jso
 
 
 def request(
-    method: str, url: str, *, read_limit: int | None = None, **kwargs,
+    method: str,
+    url: str,
+    *,
+    read_limit: int | None = None,
+    **kwargs,
 ) -> "Response":
     """Request performs an HTTP request and reads the entire response body.
 
@@ -60,7 +64,7 @@ def request(
     :return: Response object
     :rtype: Response
     :raises: HTTPException
-    """
+    """  # noqa: E501
     with yield_response(method, url, **kwargs) as response:
         try:
             body = response.read(read_limit)
@@ -101,7 +105,7 @@ def patch(url: str, body: bytes | None = None, **kwargs) -> "Response":
     return request("PATCH", url=url, body=body, **kwargs)
 
 
-def delete(url, **kwargs):
+def delete(url: str, **kwargs) -> "Response":
     """Delete performs an HTTP DELETE request."""
     return request("DELETE", url=url, **kwargs)
 
@@ -360,7 +364,9 @@ def _check_redirect(url: str, status: int, response_headers: Headers) -> str | N
     )
 
 
-def _prepare_outgoing_headers(headers: Headers | list[tuple[str, str]] | None) -> HTTPMessage:
+def _prepare_outgoing_headers(
+    headers: Headers | list[tuple[str, str]] | None,
+) -> HTTPMessage:
     if headers is None:
         headers = HTTPMessage()
     elif not isinstance(headers, HTTPMessage):
