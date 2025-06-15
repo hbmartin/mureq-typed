@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to mureq will be documented in this file.
 
+## [0.3.0]
+
+Added types compatible with mypy, pyrefly, and ty. 
+(Note that pyrefly and ty are in early development.)
+
 ## [0.2.0] - 2022-02-03
 
 v0.2.0 is the second release of mureq.
