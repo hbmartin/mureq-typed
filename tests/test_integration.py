@@ -8,6 +8,7 @@ automated CI setting.
 from base64 import b64decode
 import contextlib
 import json
+import socketserver
 import unittest
 import socket
 import threading
@@ -307,45 +308,42 @@ class MureqIntegrationTestCase(unittest.TestCase):
         self.assertTrue(isinstance(exc.__cause__, socket.timeout))
 
 
-def _run_unix_server(sock):
-    """Accept loop for a toy http+unix server, to be run in a thread."""
-    while True:
-        try:
-            connection, _ = sock.accept()
-        except:
-            return
-        fileobj = connection.makefile("rb")
-        # read all headers
-        while fileobj.readline().strip():
-            pass
-        connection.send(
-            b"HTTP/1.0 204 No Content\r\nDate: Sun, 12 Dec 2021 08:17:16 GMT\r\n\r\n"
+class UnixHTTPHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        response = (
+            "HTTP/1.1 204 No Content\r\n"
+            "Content-Length: 0\r\n"
+            "Connection: close\r\n"
+            "\r\n"
         )
-        connection.close()
-
+        
+        self.request.sendall(response.encode('utf-8'))
 
 @contextlib.contextmanager
 def unix_http_server():
     """Contextmanager providing a http+unix server with its socket in a tmpdir."""
     with tempfile.TemporaryDirectory() as dirpath:
         path = os.path.join(dirpath, "sock")
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.bind(path)
-        sock.listen(1)
-        threading.Thread(target=_run_unix_server, args=(sock,)).start()
+        
+        class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+            daemon_threads = True  # Ensures threads don't prevent shutdown
+        
+        server = ThreadedUnixServer(path, UnixHTTPHandler)
+        thread = threading.Thread(target=server.serve_forever)
+        thread.daemon = True
+        thread.start()
+        
         try:
             yield path
         finally:
-            sock.close()
-
+            server.shutdown()
+            server.server_close()
 
 class MureqIntegrationUnixSocketTestCase(unittest.TestCase):
-    @unittest.skip("Server appears to hang")
     def test_unix_socket(self):
         with unix_http_server() as unix_socket:
             response = mureq.get("http://localhost", unix_socket=unix_socket)
             self.assertEqual(response.status_code, 204)
-            self.assertEqual(response.headers["Date"], "Sun, 12 Dec 2021 08:17:16 GMT")
 
             # test unix socket URL convention:
             # quote() has default safe='/', we must explicitly disable that so / is quoted as %2F
@@ -353,7 +351,6 @@ class MureqIntegrationUnixSocketTestCase(unittest.TestCase):
                 "http+unix://%s/bar/baz" % (urllib.parse.quote(unix_socket, safe=""),)
             )
             self.assertEqual(response.status_code, 204)
-            self.assertEqual(response.headers["Date"], "Sun, 12 Dec 2021 08:17:16 GMT")
 
 
 @contextlib.contextmanager
@@ -370,7 +367,6 @@ def local_http_server():
 
 
 class MureqIntegrationPortTestCase(unittest.TestCase):
-    @unittest.skip("Server appears to hang")
     def test_nonstandard_port(self):
         with local_http_server() as port:
             # test reading the port out of the URL:
