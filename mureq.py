@@ -44,6 +44,7 @@ DEFAULT_TIMEOUT: int = 15
 DEFAULT_UA = "Python " + sys.version.split()[0]
 
 Headers = MutableMapping[str, str] | HTTPMessage
+# pyrefly: ignore  # not-a-type
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
