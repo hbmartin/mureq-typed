@@ -355,8 +355,8 @@ def _prepare_outgoing_headers(headers: Headers | None) -> HTTPMessage:
 
 # XXX join multi-headers together so that get(), __getitem__(),
 # etc. behave intuitively, then stuff them back in an HTTPMessage.
-def _prepare_incoming_headers(headers):
-    headers_dict = {}
+def _prepare_incoming_headers(headers: Headers) -> HTTPMessage:
+    headers_dict: dict[str, list[str]] = {}
     for k, v in headers.items():
         headers_dict.setdefault(k, []).append(v)
     result = HTTPMessage()
@@ -367,9 +367,9 @@ def _prepare_incoming_headers(headers):
     return result
 
 
-def _setdefault_header(headers: Headers, name: str, value: str):
+def _setdefault_header(headers: Headers, name: str, value: str) -> None:
     if name not in headers:
-        headers[name] = value
+        headers[name] = value  # type: ignore[index]
 
 
 def _prepare_body(
