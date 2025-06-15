@@ -41,7 +41,7 @@ Headers = MutableMapping[str, str] | HTTPMessage
 JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 
-def request(method, url, *, read_limit=None, **kwargs):
+def request(method: str, url: str, *, read_limit: int | None = None, **kwargs) -> "Response":
     """Request performs an HTTP request and reads the entire response body.
 
     :param str method: HTTP method to request (e.g. 'GET', 'POST')
@@ -425,11 +425,11 @@ def _prepare_request(
     """Parses the URL, returns the path and the right HTTPConnection subclass."""
     parsed_url = urllib.parse.urlparse(url)
 
-    is_unix = unix_socket is not None
     scheme = parsed_url.scheme.lower()
     if scheme.endswith("+unix"):
         scheme = scheme[:-5]
-        is_unix = True
+        if unix_socket is None:
+            unix_socket = urllib.parse.unquote(parsed_url.netloc)
         if scheme == "https":
             raise ValueError("https+unix is not implemented")
 
@@ -443,9 +443,6 @@ def _prepare_request(
     port = 443 if is_https else 80
     if parsed_url.port:
         port = parsed_url.port
-
-    if is_unix and unix_socket is None:
-        unix_socket = urllib.parse.unquote(parsed_url.netloc)
 
     path = parsed_url.path
     if parsed_url.query:
@@ -462,7 +459,7 @@ def _prepare_request(
         source_address = (source_address, 0)
 
     conn: HTTPConnection | UnixHTTPConnection | HTTPSConnection
-    if is_unix:
+    if unix_socket is not None:
         conn = UnixHTTPConnection(unix_socket, timeout=timeout)
     elif is_https:
         if ssl_context is None:
