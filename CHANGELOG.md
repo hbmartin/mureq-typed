@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to mureq will be documented in this file.
 
-## [0.3.0]
+## [0.3.0] - 2025-06-15
 
 Added types compatible with mypy, pyrefly, and ty. 
 (Note that pyrefly and ty are in early development.)
