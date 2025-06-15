@@ -12,7 +12,9 @@ import socket
 import ssl
 import sys
 import urllib.parse
+from collections.abc import Mapping
 from http.client import HTTPConnection, HTTPException, HTTPMessage, HTTPSConnection
+from typing import Any, cast
 
 __version__ = "0.2.0"
 
@@ -34,6 +36,8 @@ DEFAULT_TIMEOUT = 15.0
 
 # e.g. "Python 3.8.10"
 DEFAULT_UA = "Python " + sys.version.split()[0]
+
+Headers = Mapping[str, str] | HTTPMessage
 
 
 def request(method, url, *, read_limit=None, **kwargs):
@@ -143,7 +147,7 @@ def yield_response(
     :raises: HTTPException
     """
     method = method.upper()
-    headers = _prepare_outgoing_headers(headers)
+    headers = cast("Mapping[str, str]", _prepare_outgoing_headers(headers))
     enc_params = _prepare_params(params)
     body = _prepare_body(body, form, json, headers)
 
@@ -178,7 +182,7 @@ def yield_response(
                 yield response
                 return
             else:
-                url = redirect_url
+                url = str(redirect_url)
                 if response.status == 303:
                     # 303 See Other: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/303
                     method = "GET"
@@ -337,7 +341,7 @@ def _check_redirect(url, status, response_headers):
     )
 
 
-def _prepare_outgoing_headers(headers):
+def _prepare_outgoing_headers(headers: Headers | None) -> HTTPMessage:
     if headers is None:
         headers = HTTPMessage()
     elif not isinstance(headers, HTTPMessage):
@@ -372,7 +376,12 @@ def _setdefault_header(headers, name, value):
         headers[name] = value
 
 
-def _prepare_body(body, form, json, headers):
+def _prepare_body(
+    body: bytes | None,
+    form: dict[str, str | bytes] | list[tuple[str, str | bytes]] | None,
+    json: dict[str, Any] | list[Any] | None,
+    headers: Headers,
+) -> bytes | str | None:
     if body is not None:
         if not isinstance(body, bytes):
             raise TypeError("body must be bytes or None", type(body))
@@ -391,14 +400,16 @@ def _prepare_body(body, form, json, headers):
     return None
 
 
-def _prepare_params(params) -> str:
+def _prepare_params(
+    params: dict[str, str | bytes] | list[tuple[str, str | bytes]] | None,
+) -> str:
     if params is None:
         return ""
     return urllib.parse.urlencode(params, doseq=True)
 
 
 def _prepare_request(
-    method: str,
+    method: str,  # noqa: ARG001
     url: str,
     *,
     enc_params: str = "",
@@ -481,6 +492,6 @@ def _prepare_request(
                 "",
                 parsed_url.fragment,
             ),
-        )
+        ),
     )
     return munged_url, conn, path
