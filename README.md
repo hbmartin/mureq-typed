@@ -27,6 +27,15 @@ b'{"type":"sync","status-code":200,"status":"OK","result":{"established":[],"plu
 {'type': 'sync', 'status-code': 200, 'status': 'OK', 'result': {'established': [], 'plugs': [], 'slots': []}}
 ```
 
+- [Why?](#why)
+   * [Performance](#performance)
+   * [Security](#security)
+   * [Simplicity](#simplicity)
+- [How?](#how)
+   * [How do I install mureq?](#how-do-i-install-mureq)
+   * [How do I use mureq?](#how-do-i-use-mureq)
+- [Who?](#who)
+
 ## Why?
 
 In short: performance (memory consumption), security (resilience to supply-chain attacks), and simplicity.
@@ -95,6 +104,8 @@ If you're switching from python-requests, there are a few things to keep in mind
 1. mureq supports two ways of making HTTP requests over a Unix domain stream socket:
     - The `unix_socket` kwarg, which overrides the hostname in the URL, e.g. `mureq.get('http://snapd/', unix_socket='/run/snapd.socket')`
     - The `http+unix` URL scheme, which take the percent-encoded path as the hostname, e.g. `http+unix://%2Frun%2Fsnapd.socket/` to connect to `/run/snapd.socket`.
+
+If you are using the [ruff formatter](https://docs.astral.sh/ruff/), please add [these rules](https://github.com/hbmartin/mureq-typed/blob/master/ruff.toml#L11) for `.../mureq.py` to your `per-file-ignores`.
 
 ## Who?
 
