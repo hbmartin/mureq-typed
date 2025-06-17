@@ -7,7 +7,6 @@ mureq is copyright 2021 by its contributors and is released under the
 
 import contextlib
 import io
-import os.path
 import socket
 import ssl
 import sys
@@ -38,7 +37,7 @@ __all__ = [
     "yield_response",
 ]
 
-DEFAULT_TIMEOUT: int = 15
+DEFAULT_TIMEOUT: float = 15
 
 # e.g. "Python 3.8.10"
 DEFAULT_UA = "Python " + sys.version.split()[0]
@@ -82,32 +81,50 @@ def request(
 
 
 def get(url: str, **kwargs) -> "Response":
-    """Get performs an HTTP GET request."""
+    """Performs an HTTP GET request.
+
+    See yield_response for kwargs.
+    """
     return request("GET", url=url, **kwargs)
 
 
 def post(url: str, body: bytes | None = None, **kwargs) -> "Response":
-    """Post performs an HTTP POST request."""
+    """Performs an HTTP POST request.
+
+    See yield_response for kwargs.
+    """
     return request("POST", url=url, body=body, **kwargs)
 
 
 def head(url: str, **kwargs) -> "Response":
-    """Head performs an HTTP HEAD request."""
+    """Performs an HTTP HEAD request.
+
+    See yield_response for kwargs.
+    """
     return request("HEAD", url=url, **kwargs)
 
 
 def put(url: str, body: bytes | None = None, **kwargs) -> "Response":
-    """Put performs an HTTP PUT request."""
+    """Performs an HTTP PUT request.
+
+    See yield_response for kwargs.
+    """
     return request("PUT", url=url, body=body, **kwargs)
 
 
 def patch(url: str, body: bytes | None = None, **kwargs) -> "Response":
-    """Patch performs an HTTP PATCH request."""
+    """Performs an HTTP PATCH request.
+
+    See yield_response for kwargs.
+    """
     return request("PATCH", url=url, body=body, **kwargs)
 
 
 def delete(url: str, **kwargs) -> "Response":
-    """Delete performs an HTTP DELETE request."""
+    """Performs an HTTP DELETE request.
+
+    See yield_response for kwargs.
+    """
     return request("DELETE", url=url, **kwargs)
 
 
@@ -142,14 +159,14 @@ def yield_response(
     :param unix_socket: path to Unix domain socket to query, or None for a normal TCP request
     :type unix_socket: str or None
     :param timeout: timeout in seconds, or None for no timeout (default: 15 seconds)
-    :type timeout: int or None
+    :type timeout: float or None
     :param headers: HTTP headers as a mapping or list of key-value pairs
     :param params: parameters to be URL-encoded and added to the query string, as a mapping or list of key-value pairs
     :param body: payload body of the request
     :type body: bytes or None
     :param form: parameters to be form-encoded and sent as the payload body, as a mapping or list of key-value pairs
     :param json: object to be serialized as JSON and sent as the payload body
-    :param bool verify: whether to verify TLS certificates (default: True)
+    :param bool verify: whether to verify TLS certificates (default: True) - it is highly recommended to set this True
     :param source_address: source address to bind to for TCP
     :type source_address: str or tuple(str, int) or None
     :param max_redirects: maximum number of redirects to follow, or None (the default) for no redirection
@@ -169,8 +186,7 @@ def yield_response(
 
     while max_redirects is None or len(visited_urls) <= max_redirects:
         url, conn, path = _prepare_request(
-            method,
-            url,
+            url=url,
             enc_params=enc_params,
             timeout=timeout,
             unix_socket=unix_socket,
@@ -305,7 +321,7 @@ class UnixHTTPConnection(HTTPConnection):
     Unix domain stream socket instead of a TCP address.
     """
 
-    def __init__(self, path: str, timeout: int | None = DEFAULT_TIMEOUT) -> None:
+    def __init__(self, path: str, timeout: float | None = DEFAULT_TIMEOUT) -> None:
         super().__init__("localhost", timeout=timeout)
         self._unix_path = path
 
@@ -349,20 +365,7 @@ def _check_redirect(url: str, status: int, response_headers: Headers) -> str | N
         )
 
     # relative path on old hostname
-    old_dir, _old_file = os.path.split(old_url.path)
-    new_path = os.path.join(old_dir, location)
-    return str(
-        urllib.parse.urlunparse(
-            (
-                old_url.scheme,
-                old_url.netloc,
-                new_path,
-                parsed_location.params,
-                parsed_location.query,
-                parsed_location.fragment,
-            ),
-        ),
-    )
+    return urllib.parse.urljoin(url, location)
 
 
 def _prepare_outgoing_headers(
@@ -392,6 +395,7 @@ def _prepare_incoming_headers(headers: Headers) -> HTTPMessage:
     result = HTTPMessage()
     # note that iterating over headers_dict preserves the original
     # insertion order in all versions since Python 3.6:
+    # XXX: Issue #15: this is incorrect for some headers, notably Set-Cookie
     for k, vlist in headers_dict.items():
         result[k] = ",".join(vlist)
     return result
@@ -435,7 +439,6 @@ def _prepare_params(
 
 
 def _prepare_request(
-    method: str,  # noqa: ARG001
     url: str,
     *,
     enc_params: str = "",
@@ -480,9 +483,6 @@ def _prepare_request(
 
     if isinstance(source_address, str):
         source_address = (source_address, 0)
-
-    if timeout is not None and isinstance(timeout, float):
-        timeout = int(timeout)
 
     conn: HTTPConnection | UnixHTTPConnection | HTTPSConnection
     if unix_socket is not None:
