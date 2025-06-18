@@ -12,6 +12,7 @@ import ssl
 import sys
 import urllib.parse
 from collections.abc import Generator, MutableMapping
+from http import HTTPStatus
 from http.client import (
     HTTPConnection,
     HTTPException,
@@ -129,7 +130,7 @@ def delete(url: str, **kwargs) -> "Response":
 
 
 @contextlib.contextmanager
-def yield_response(
+def yield_response(  # noqa: PLR0913
     method: str,
     url: str,
     *,
@@ -180,7 +181,7 @@ def yield_response(
     method = method.upper()
     headers = cast("MutableMapping[str, str]", _prepare_outgoing_headers(headers))
     enc_params = _prepare_params(params)
-    prepared_body: bytes | str | None = _prepare_body(body, form, json, headers)
+    prepared_body = _prepare_body(body, form, json, headers)
 
     visited_urls: list[str] = []
 
@@ -213,7 +214,7 @@ def yield_response(
                 return
             else:
                 url = str(redirect_url)
-                if response.status == 303:
+                if response.status == HTTPStatus.SEE_OTHER:
                     # 303 See Other: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/303
                     method = "GET"
         finally:
@@ -223,13 +224,7 @@ def yield_response(
 
 
 class Response:
-    """Response contains a completely consumed HTTP response.
-
-    :ivar str url: the retrieved URL, indicating whether a redirection occurred
-    :ivar int status_code: the HTTP status code
-    :ivar http.client.HTTPMessage headers: the HTTP headers
-    :ivar bytes body: the payload body of the response
-    """
+    """Response contains a completely consumed HTTP response."""
 
     __slots__ = ("body", "headers", "status_code", "url")
 
@@ -240,6 +235,13 @@ class Response:
         headers: Headers,
         body: bytes,
     ) -> None:
+        """Initialize a Response object.
+
+        :ivar str url: the retrieved URL, indicating whether a redirection occurred
+        :ivar int status_code: the HTTP status code
+        :ivar http.client.HTTPMessage headers: the HTTP headers
+        :ivar bytes body: the payload body of the response
+        """
         self.url, self.status_code, self.headers, self.body = (
             url,
             status_code,
@@ -255,7 +257,11 @@ class Response:
         """Ok returns whether the response had a successful status code
         (anything other than a 40x or 50x).
         """
-        return not (400 <= self.status_code < 600)
+        return not (
+            HTTPStatus.BAD_REQUEST
+            <= self.status_code
+            < HTTPStatus.NETWORK_AUTHENTICATION_REQUIRED
+        )
 
     @property
     def content(self) -> bytes:
@@ -273,7 +279,7 @@ class Response:
 
     def json(self) -> JsonValue:
         """Attempts to deserialize the response body as UTF-8 encoded JSON."""
-        import json as jsonlib
+        import json as jsonlib  # noqa: PLC0415
 
         return jsonlib.loads(self.body)
 
@@ -386,7 +392,7 @@ def _prepare_outgoing_headers(
     return headers
 
 
-# XXX join multi-headers together so that get(), __getitem__(),
+# XXX: Issue #15 join multi-headers together so that get(), __getitem__(),
 # etc. behave intuitively, then stuff them back in an HTTPMessage.
 def _prepare_incoming_headers(headers: Headers) -> HTTPMessage:
     headers_dict: dict[str, list[str]] = {}
@@ -419,7 +425,7 @@ def _prepare_body(
 
     if json is not None:
         _setdefault_header(headers, "Content-Type", _JSON_CONTENTTYPE)
-        import json as jsonlib
+        import json as jsonlib  # noqa: PLC0415
 
         return jsonlib.dumps(json).encode("utf-8")
 
@@ -438,7 +444,22 @@ def _prepare_params(
     return urllib.parse.urlencode(params, doseq=True)
 
 
-def _prepare_request(
+def _path_with_query_or_params(
+    enc_params: str,
+    parsed_url: urllib.parse.ParseResult,
+) -> str:
+    path = parsed_url.path
+    if parsed_url.query:
+        if enc_params:
+            path = f"{path}?{parsed_url.query}&{enc_params}"
+        else:
+            path = f"{path}?{parsed_url.query}"
+    elif enc_params:
+        path = f"{path}?{enc_params}"
+    return path
+
+
+def _prepare_request(  # noqa: C901, PLR0913
     url: str,
     *,
     enc_params: str = "",
@@ -470,16 +491,7 @@ def _prepare_request(
     if parsed_url.port:
         port = parsed_url.port
 
-    path = parsed_url.path
-    if parsed_url.query:
-        if enc_params:
-            path = f"{path}?{parsed_url.query}&{enc_params}"
-        else:
-            path = f"{path}?{parsed_url.query}"
-    elif enc_params:
-        path = f"{path}?{enc_params}"
-    else:
-        pass  # just parsed_url.path in this case
+    path = _path_with_query_or_params(enc_params, parsed_url)
 
     if isinstance(source_address, str):
         source_address = (source_address, 0)

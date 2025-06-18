@@ -8,7 +8,7 @@ target-version = "py311"
 
 [lint]
 select = ["ALL"]
-ignore = ["ANN003", "C901", "D105", "D107", "D203", "D205", "D213", "D401", "EM101", "ERA001", "FIX003", "PLC0415", "PLR0912", "PLR0913", "PLR2004", "PTH118", "TD001", "TD002", "TD003", "TD004", "TRY003"]
+ignore = ["ANN003", "D105", "D203", "D205", "D213", "D401", "EM101", "ERA001", "FIX003", "TD001", "TD002", "TRY003"]
 
 [format]
 # Same as Black.
