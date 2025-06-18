@@ -6,7 +6,11 @@ mureq
 
 `mureq` is a single-file, zero-dependency alternative to [python-requests](https://github.com/psf/requests), intended to be vendored in-tree by Linux systems software and other lightweight applications. It is released under the [0BSD license](https://opensource.org/licenses/0BSD) to facilitate this (it can be freely copied without any attribution requirements).
 
-mureq is type checked with mypy, ty, and pyrefly. It is formatted with black and linted with ruff.
+`mureq-typed` is a drop-in, fully API compatible replacement for mureq updated with modern Python tooling:
+
+* Type checked with mypy, ty, and pyrefly.
+* Formatted with black, no ignore rules necessary.
+* Linted with ruff  (add [these rules](https://github.com/hbmartin/mureq-typed/blob/master/ruff.toml#L11) for `mureq.py` to your `per-file-ignores`).
 
 ```
 >>> mureq.get('https://clients3.google.com/generate_204')
@@ -106,8 +110,6 @@ If you're switching from python-requests, there are a few things to keep in mind
 1. mureq supports two ways of making HTTP requests over a Unix domain stream socket:
     - The `unix_socket` kwarg, which overrides the hostname in the URL, e.g. `mureq.get('http://snapd/', unix_socket='/run/snapd.socket')`
     - The `http+unix` URL scheme, which take the percent-encoded path as the hostname, e.g. `http+unix://%2Frun%2Fsnapd.socket/` to connect to `/run/snapd.socket`.
-
-If you are using the [ruff formatter](https://docs.astral.sh/ruff/), please add [these rules](https://github.com/hbmartin/mureq-typed/blob/master/ruff.toml#L11) for `.../mureq.py` to your `per-file-ignores`.
 
 ## Who?
 
