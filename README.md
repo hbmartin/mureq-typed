@@ -3,6 +3,9 @@ mureq
 
 [![TypeChecks](https://github.com/hbmartin/mureq-typed/actions/workflows/lint.yml/badge.svg)](https://github.com/hbmartin/mureq-typed/actions/workflows/lint.yml)
 [![Test](https://github.com/hbmartin/mureq-typed/actions/workflows/test.yml/badge.svg)](https://github.com/hbmartin/mureq-typed/actions/workflows/test.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![0BSD](https://img.shields.io/github/license/hbmartin/mureq-typed)](https://github.com/hbmartin/mureq-typed/blob/master/LICENSE)
 
 `mureq` is a single-file, zero-dependency alternative to [python-requests](https://github.com/psf/requests), intended to be vendored in-tree by Linux systems software and other lightweight applications. It is released under the [0BSD license](https://opensource.org/licenses/0BSD) to facilitate this (it can be freely copied without any attribution requirements).
 
@@ -112,6 +115,10 @@ If you're switching from python-requests, there are a few things to keep in mind
     - The `http+unix` URL scheme, which take the percent-encoded path as the hostname, e.g. `http+unix://%2Frun%2Fsnapd.socket/` to connect to `/run/snapd.socket`.
 
 ## Who?
+
+Typing, formatting, and other recent fixes by [Harold Martin](https://www.linkedin.com/in/harold-martin-98526971/) - harold.martin at gmail
+
+Forked from [mureq](https://github.com/slingamn/mureq) by [slingamn](https://cs.stanford.edu/people/slingamn/)
 
 If I were you, I would be asking: given that python-requests is used successfully on millions of systems, who is this person touting a replacement?
 
